@@ -23,8 +23,12 @@
 
 namespace BackBee\Stream\ClassWrapper;
 
+use BackBee\AutoLoader\AutoLoader;
 use BackBee\Stream\ClassWrapper\Exception\ClassWrapperException;
 use BackBee\Stream\StreamWrapperInterface;
+use const SEEK_CUR;
+use const SEEK_END;
+use const SEEK_SET;
 
 /**
  * Abstract class for content wrapper in BackBee 4
@@ -47,7 +51,7 @@ abstract class AbstractClassWrapper implements StreamWrapperInterface
     /**
      * The registered BackBee autoloader.
      *
-     * @var \BackBee\Autoloader\Autoloader
+     * @var Autoloader
      */
     protected $_autoloader;
 
@@ -148,7 +152,7 @@ abstract class AbstractClassWrapper implements StreamWrapperInterface
      * @var string
      */
     protected $template =
-            '<?php
+        '<?php
 namespace <namespace>;
 
 /**
@@ -184,7 +188,7 @@ class <classname> extends <extends> <interface>
     public function __construct()
     {
         foreach (spl_autoload_functions() as $autoloader) {
-            if (true === is_array($autoloader) && $autoloader[0] instanceof \BackBee\AutoLoader\AutoLoader) {
+            if (true === is_array($autoloader) && $autoloader[0] instanceof AutoLoader) {
                 if ($autoloader[0] !== null && $autoloader[0]->getApplication()) {
                     $this->_autoloader = $autoloader[0];
                     break;
@@ -220,38 +224,58 @@ class <classname> extends <extends> <interface>
                 $type = 'string';
             }
 
-            $docBlock .= "\n * @property ".$type.' $'.$key.' '.(isset($element['options']['label']) ? $element['options']['label'] : '');
+            $docBlock .= "\n * @property " . $type . ' $' . $key . ' ' . ($element['options']['label'] ?? '');
         }
 
-        array_walk($defineData, function (&$value, $key) {
-                    $value = "->defineData('".$key."', '".$value['type']."', ".var_export($value['options'], true).")";
-                });
-        array_walk($defineParam, function (&$value, $key) {
-                    $value = "->defineParam('".$key."', ".var_export($value, true).")";
-                });
-        array_walk($defineProps, function (&$value, $key) {
-                    $value = "->defineProperty('".$key."', ".var_export($value, true).")";
-                });
+        array_walk(
+            $defineData,
+            function (&$value, $key) {
+                $value = "->defineData('" . $key . "', '" . $value['type'] . "', " . var_export(
+                    $value['options'],
+                    true
+                ) . ")";
+            }
+        );
+        array_walk(
+            $defineParam,
+            function (&$value, $key) {
+                $value = "->defineParam('" . $key . "', " . var_export($value, true) . ")";
+            }
+        );
+        array_walk(
+            $defineProps,
+            function (&$value, $key) {
+                $value = "->defineProperty('" . $key . "', " . var_export($value, true) . ")";
+            }
+        );
 
-        $phpCode = str_replace(array('<namespace>',
-            '<classname>',
-            '<repository>',
-            '<extends>',
-            '<interface>',
-            '<trait>',
-            '<defineDatas>',
-            '<defineParam>',
-            '<defineProps>',
-            '<docblock>', ), array($this->namespace,
-            $this->classname,
-            $this->repository,
-            $this->extends,
-            $this->interfaces,
-            $this->traits,
-            (0 < count($defineData)) ? '$this'.implode('', $defineData).';' : '',
-            (0 < count($defineParam)) ? '$this'.implode('', $defineParam).';' : '',
-            (0 < count($defineProps)) ? '$this'.implode('', $defineProps).';' : '',
-            $docBlock, ), $this->template);
+        $phpCode = str_replace(
+            array(
+                '<namespace>',
+                '<classname>',
+                '<repository>',
+                '<extends>',
+                '<interface>',
+                '<trait>',
+                '<defineDatas>',
+                '<defineParam>',
+                '<defineProps>',
+                '<docblock>',
+            ),
+            array(
+                $this->namespace,
+                $this->classname,
+                $this->repository,
+                $this->extends,
+                $this->interfaces,
+                $this->traits,
+                (0 < count($defineData)) ? '$this' . implode('', $defineData) . ';' : '',
+                (0 < count($defineParam)) ? '$this' . implode('', $defineParam) . ';' : '',
+                (0 < count($defineProps)) ? '$this' . implode('', $defineProps) . ';' : '',
+                $docBlock,
+            ),
+            $this->template
+        );
 
         return $phpCode;
     }
@@ -261,6 +285,7 @@ class <classname> extends <extends> <interface>
      *
      * @param string $var The var name to check
      *
+     * @return string
      * @throws ClassWrapperException Occurs for a syntax error
      */
     protected function _normalizeVar($var, $includeSeparator = false)
@@ -269,17 +294,25 @@ class <classname> extends <extends> <interface>
             $var = explode(NAMESPACE_SEPARATOR, $var);
         }
 
-        $vars = (array) $var;
+        $vars = (array)$var;
 
         $pattern = "/[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/";
 
         foreach ($vars as $var) {
-            if ($var != '' && !preg_match($pattern, $var)) {
+            if ($var !== '' && !preg_match($pattern, $var)) {
                 throw new ClassWrapperException(sprintf('Syntax error: \'%s\'', $var));
             }
         }
 
         return implode(($includeSeparator) ? NAMESPACE_SEPARATOR : '', $vars);
+    }
+
+    /**
+     * @see ClassWrapperInterface::stream_set_option()
+     */
+    public function stream_set_option(int $option, int $arg1, int $arg2): bool
+    {
+        return false;
     }
 
     /**
@@ -325,38 +358,35 @@ class <classname> extends <extends> <interface>
     /**
      * @see ClassWrapperInterface::stream_seek()
      */
-    public function stream_seek($offset, $whence = \SEEK_SET)
+    public function stream_seek($offset, $whence = SEEK_SET)
     {
         switch ($whence) {
-            case \SEEK_SET:
+            case SEEK_SET:
                 if ($offset < strlen($this->_data) && $offset >= 0) {
                     $this->_pos = $offset;
 
                     return true;
-                } else {
-                    return false;
                 }
-                break;
 
-            case \SEEK_CUR:
+                return false;
+
+            case SEEK_CUR:
                 if ($offset >= 0) {
                     $this->_pos += $offset;
 
                     return true;
-                } else {
-                    return false;
                 }
-                break;
 
-            case \SEEK_END:
+                return false;
+
+            case SEEK_END:
                 if (strlen($this->_data) + $offset >= 0) {
                     $this->_pos = strlen($this->_data) + $offset;
 
                     return true;
-                } else {
-                    return false;
                 }
-                break;
+
+                return false;
 
             default:
                 return false;
@@ -368,7 +398,7 @@ class <classname> extends <extends> <interface>
      */
     public function stream_stat()
     {
-        return $this->_stat;
+        //return $this->_stat;
     }
 
     /**
@@ -391,8 +421,6 @@ class <classname> extends <extends> <interface>
      * Extract and format datas from parser.
      *
      * @param array $data
-     *
-     * @return the extracted datas
      */
     abstract protected function _extractData($data);
 

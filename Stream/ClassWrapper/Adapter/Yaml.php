@@ -23,13 +23,13 @@
 
 namespace BackBee\Stream\ClassWrapper\Adapter;
 
-use Symfony\Component\Yaml\Exception\ParseException;
-use Symfony\Component\Yaml\Yaml as parserYaml;
 use BackBee\Event\Event;
 use BackBee\Exception\BBException;
 use BackBee\Stream\ClassWrapper\AbstractClassWrapper;
 use BackBee\Stream\ClassWrapper\Exception\ClassWrapperException;
 use BackBee\Utils\File\File;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml as parserYaml;
 
 /**
  * Stream wrapper to interprete yaml file as class content description
@@ -188,8 +188,8 @@ class Yaml extends AbstractClassWrapper
                         case 'extends':
                             $this->extends = $this->_normalizeVar($data, true);
                             if (substr($this->extends, 0, 1) != NAMESPACE_SEPARATOR) {
-                                $this->extends = NAMESPACE_SEPARATOR.$this->namespace.
-                                    NAMESPACE_SEPARATOR.$this->extends;
+                                $this->extends = NAMESPACE_SEPARATOR . $this->namespace .
+                                    NAMESPACE_SEPARATOR . $this->extends;
                             }
 
                             break;
@@ -200,7 +200,7 @@ class Yaml extends AbstractClassWrapper
                             foreach ($data as $i) {
                                 $interface = $i;
                                 if (NAMESPACE_SEPARATOR !== substr($i, 0, 1)) {
-                                    $interface = NAMESPACE_SEPARATOR.$i;
+                                    $interface = NAMESPACE_SEPARATOR . $i;
                                 }
 
                                 // add interface only if it exists
@@ -212,7 +212,7 @@ class Yaml extends AbstractClassWrapper
                             // build up interface use string
                             $str = implode(', ', $this->interfaces);
                             if (0 < count($this->interfaces)) {
-                                $this->interfaces = 'implements '.$str;
+                                $this->interfaces = 'implements ' . $str;
                             } else {
                                 $this->interfaces = '';
                             }
@@ -230,7 +230,7 @@ class Yaml extends AbstractClassWrapper
                             foreach ($data as $t) {
                                 $trait = $t;
                                 if (NAMESPACE_SEPARATOR !== substr($t, 0, 1)) {
-                                    $trait = NAMESPACE_SEPARATOR.$t;
+                                    $trait = NAMESPACE_SEPARATOR . $t;
                                 }
 
                                 // add traits only if it exists
@@ -242,7 +242,7 @@ class Yaml extends AbstractClassWrapper
                             // build up trait use string
                             $str = implode(', ', $this->traits);
                             if (0 < count($this->traits)) {
-                                $this->traits = 'use '.$str.';';
+                                $this->traits = 'use ' . $str . ';';
                             } else {
                                 $this->traits = '';
                             }
@@ -252,7 +252,7 @@ class Yaml extends AbstractClassWrapper
                         case 'parameters':
                         case 'properties':
                             $values = array();
-                            $data = (array) $data;
+                            $data = (array)$data;
                             foreach ($data as $var => $value) {
                                 $values[strtolower($this->_normalizeVar($var))] = $value;
                             }
@@ -278,10 +278,10 @@ class Yaml extends AbstractClassWrapper
      */
     private function resolveFilePath($path)
     {
-        $path = str_replace(array($this->_protocol.'://', '/'), array('', DIRECTORY_SEPARATOR), $path);
+        $path = str_replace(array($this->_protocol . '://', '/'), array('', DIRECTORY_SEPARATOR), $path);
 
         foreach ($this->_includeExtensions as $ext) {
-            $filename = $path.$ext;
+            $filename = $path . $ext;
             File::resolveFilepath($filename, null, array('include_path' => $this->_classcontentdir));
             if (true === is_file($filename)) {
                 return $filename;
@@ -299,10 +299,10 @@ class Yaml extends AbstractClassWrapper
         $classnames = [];
         foreach ($this->_classcontentdir as $repository) {
             foreach ($this->_includeExtensions as $ext) {
-                if (false !== $files = glob($repository.DIRECTORY_SEPARATOR.$pattern.$ext)) {
+                if (false !== $files = glob($repository . DIRECTORY_SEPARATOR . $pattern . $ext)) {
                     foreach ($files as $file) {
-                        $classnames[] = $this->namespace.NAMESPACE_SEPARATOR.str_replace(
-                            [$repository.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR],
+                        $classnames[] = $this->namespace . NAMESPACE_SEPARATOR . str_replace(
+                            [$repository . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR],
                             ['', NAMESPACE_SEPARATOR],
                             $file
                         );
@@ -326,25 +326,27 @@ class Yaml extends AbstractClassWrapper
     /**
      * Opens a stream content for a yaml file.
      *
-     * @see BackBee\Stream\ClassWrapper.IClassWrapper::stream_open()
-     *
      * @throws BBException           Occurs when none yamel files were found
      * @throws ClassWrapperException Occurs when yaml file is not a valid class content description
+     * @see BackBee\Stream\ClassWrapper.IClassWrapper::stream_open()
+     *
      */
     public function stream_open($path, $mode, $options, &$opened_path)
     {
-        $path = str_replace(array($this->_protocol.'://', '/'), array('', DIRECTORY_SEPARATOR), $path);
+        $path = str_replace([$this->_protocol.'://', '/', '.php'], ['', DIRECTORY_SEPARATOR, ''], $path);
 
         $this->classname = basename($path);
         if (dirname($path) && dirname($path) != DIRECTORY_SEPARATOR) {
-            $this->namespace .= NAMESPACE_SEPARATOR.str_replace(
-                DIRECTORY_SEPARATOR, NAMESPACE_SEPARATOR, dirname($path)
+            $this->namespace .= NAMESPACE_SEPARATOR . str_replace(
+                DIRECTORY_SEPARATOR,
+                NAMESPACE_SEPARATOR,
+                dirname($path)
             );
         }
 
         $this->_path = $this->resolveFilePath($path);
         if (is_file($this->_path) && is_readable($this->_path)) {
-            $this->_stat = @stat($this->_path);
+            $this->_stat = stat($this->_path);
 
             if (null !== $this->_cache) {
                 $expire = new \DateTime();
@@ -378,7 +380,7 @@ class Yaml extends AbstractClassWrapper
                         ->dispatch(
                             'classcontent.streamparsing',
                             $event
-                    );
+                        );
 
                     if ($event->hasArgument('data')) {
                         $yamlDatas = $event->getArgument('data');
@@ -400,7 +402,9 @@ class Yaml extends AbstractClassWrapper
             }
         }
 
-        throw new BBException(sprintf('Class \'%s\' not found', $this->namespace.NAMESPACE_SEPARATOR.$this->classname));
+        throw new BBException(
+            sprintf('Class \'%s\' not found', $this->namespace . NAMESPACE_SEPARATOR . $this->classname)
+        );
     }
 
     /**
@@ -410,7 +414,7 @@ class Yaml extends AbstractClassWrapper
      */
     public function url_stat($path, $flag)
     {
-        $path = str_replace(array($this->_protocol.'://', '/'), array('', DIRECTORY_SEPARATOR), $path);
+        $path = str_replace(array($this->_protocol . '://', '/'), array('', DIRECTORY_SEPARATOR), $path);
 
         $this->_path = $this->resolveFilePath($path);
         if (is_file($this->_path) && is_readable($this->_path)) {

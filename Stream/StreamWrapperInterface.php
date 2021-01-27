@@ -94,14 +94,21 @@ interface StreamWrapperInterface
      *
      * @see php.net/manual/en/book.stream.php
      */
-     public function stream_write($data);
+    public function stream_write($data);
+
+    /**
+     * Option setter.
+     *
+     * @see php.net/manual/en/book.stream.php
+     */
+    public function stream_set_option(int $option, int $arg1, int $arg2): bool;
 
     /**
      * Delete a file.
      *
      * @see php.net/manual/en/book.stream.php
      */
-     public function unlink($path);
+    public function unlink($path);
 
     /**
      * Retrieve information about a stream.
